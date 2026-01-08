@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+/* Enable dark mode via class */
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Madlen Brand Colors - Warm Orange/Amber palette */
+  --color-madlen-50: #FFF9F5;
+  --color-madlen-100: #FFF3E8;
+  --color-madlen-200: #FFE4CC;
+  --color-madlen-300: #FFD0A8;
+  --color-madlen-400: #FFB36B;
+  --color-madlen-500: #D4853C;
+  --color-madlen-600: #C27230;
+  --color-madlen-700: #A85D24;
+  --color-madlen-800: #8B4B1C;
+  --color-madlen-900: #6E3A16;
+  
+  /* Cream/Beige backgrounds */
+  --color-cream-50: #FFFCF9;
+  --color-cream-100: #FFF8F2;
+  --color-cream-200: #FFF1E6;
+  --color-cream-300: #FFE8D6;
+  --color-cream-400: #FFDDC2;
+  
+  /* Dark mode colors */
+  --color-dark-50: #374151;
+  --color-dark-100: #2D3748;
+  --color-dark-200: #252D3A;
+  --color-dark-300: #1E2530;
+  --color-dark-400: #171C24;
+  --color-dark-500: #111519;
+  --color-dark-600: #0D1015;
+  --color-dark-700: #090B0E;
+  
+  /* Custom shadows */
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.05);
+  --shadow-medium: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+@layer base {
+  body {
+    @apply bg-cream-50 text-dark-300 dark:bg-dark-500 dark:text-slate-100 m-0;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-3 bg-madlen-500 text-white font-medium rounded-xl 
+           hover:bg-madlen-600 transition-all duration-200 
+           focus:outline-none focus:ring-2 focus:ring-madlen-500 focus:ring-offset-2
+           dark:focus:ring-offset-dark-500;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 border-2 border-madlen-500 text-madlen-600 font-medium rounded-xl
+           hover:bg-madlen-50 transition-all duration-200
+           dark:text-madlen-400 dark:hover:bg-dark-400;
+  }
+
+  .card {
+    @apply bg-white dark:bg-dark-400 rounded-2xl p-6 border border-cream-300 dark:border-dark-100;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border border-cream-300 dark:border-dark-100
+           bg-white dark:bg-dark-300 
+           text-dark-300 dark:text-slate-100
+           placeholder:text-slate-400 dark:placeholder:text-slate-500
+           focus:outline-none focus:ring-2 focus:ring-madlen-500 focus:border-transparent
+           transition-all duration-200;
+  }
+
+  .sidebar {
+    @apply bg-cream-100 dark:bg-dark-400 border-r border-cream-300 dark:border-dark-100;
+  }
+
+  .chat-bubble-user {
+    @apply bg-madlen-500 text-white rounded-2xl rounded-tr-md px-4 py-3;
+  }
+
+  .chat-bubble-assistant {
+    @apply bg-white dark:bg-dark-300 text-dark-300 dark:text-slate-100 
+           rounded-2xl rounded-tl-md px-4 py-3 border border-cream-300 dark:border-dark-100;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-cream-100;
+}
+
+.dark ::-webkit-scrollbar-track {
+  @apply bg-dark-400;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-cream-400 rounded-full;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  @apply bg-dark-100;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-madlen-300;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  @apply bg-dark-50;
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition-property: background-color, border-color;
+  transition-duration: 200ms;
+}
