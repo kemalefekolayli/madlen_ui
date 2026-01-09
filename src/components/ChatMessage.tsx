@@ -2,9 +2,10 @@ import type { Message } from '../types';
 
 interface ChatMessageProps {
   message: Message;
+  modelName?: string; // YENİ: Model adını göstermek için
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({ message, modelName }: ChatMessageProps) {
   const isUser = message.role === 'user';
 
   return (
@@ -30,6 +31,12 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
         {/* Message Content */}
         <div className={isUser ? 'chat-bubble-user' : 'chat-bubble-assistant'}>
+          {/* Model adını sadece assistant mesajlarında göster */}
+          {!isUser && modelName && (
+            <div className="text-xs font-medium text-madlen-500 dark:text-madlen-400 mb-1">
+              {modelName}
+            </div>
+          )}
           <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
           <div className={`text-xs mt-2 ${isUser ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}`}>
             {new Date(message.timestamp).toLocaleTimeString('tr-TR', { 

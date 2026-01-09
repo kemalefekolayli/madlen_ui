@@ -15,7 +15,8 @@ function AppContent() {
     setInput,
     setCurrentChatId, 
     setSelectedModel, 
-    createNewChat, 
+    createNewChat,
+    deleteChat,
     sendMessage 
   } = useChat();
 
@@ -26,9 +27,9 @@ function AppContent() {
         currentChatId={currentChatId}
         onSelectChat={setCurrentChatId}
         onNewChat={createNewChat}
+        onDeleteChat={deleteChat}
       />
       
-      {/* Container artık daha temiz */}
       <div className="flex-1 flex flex-col relative h-full">
         <ChatView
           chat={currentChat}
@@ -40,7 +41,6 @@ function AppContent() {
           input={input}
           setInput={setInput}
         />
-        {/* StarterPrompts buradan kaldırıldı, artık ChatView içinde */}
       </div>
     </div>
   );

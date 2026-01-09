@@ -1,11 +1,11 @@
-import React, { FormEvent, useRef, useEffect } from 'react';
+import React, { type FormEvent, useRef, useEffect } from 'react'; // DÜZELTME: 'type FormEvent'
 import { Send, StopCircle } from 'lucide-react';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
   isLoading: boolean;
-  input: string;                  // YENİ PROP
-  setInput: (value: string) => void; // YENİ PROP
+  input: string;
+  setInput: (value: string) => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, input, setInput }) => {

@@ -10,8 +10,6 @@ export const useChat = () => {
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
-  
-  // YENİ: Input state'ini burada tutuyoruz
   const [input, setInput] = useState("");
 
   const currentChat = chats.find(c => c.id === currentChatId) || null;
@@ -26,7 +24,6 @@ export const useChat = () => {
         ]);
         setModels(fetchedModels);
         
-        // Model varsa ve seçili değilse ilkini seç
         if (fetchedModels.length > 0 && !selectedModel) {
           setSelectedModel(fetchedModels[0].id);
         }
@@ -52,11 +49,25 @@ export const useChat = () => {
     } catch (e) { console.error(e); }
   }, [selectedModel, models]);
 
-  // 3. Mesaj Gönderme
+  // 3. Sohbet Sil
+  const deleteChat = useCallback(async (chatId: string) => {
+    try {
+      await chatService.deleteSession(chatId, USER_ID);
+      setChats(prev => prev.filter(c => c.id !== chatId));
+      
+      // Silinen sohbet aktifse, başka bir sohbete geç veya null yap
+      if (currentChatId === chatId) {
+        setCurrentChatId(null);
+      }
+    } catch (error) {
+      console.error("Sohbet silme hatası", error);
+    }
+  }, [currentChatId]);
+
+  // 4. Mesaj Gönderme
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return;
 
-    // Model kontrolü
     let activeModel = selectedModel;
     if (!activeModel && models.length > 0) {
         activeModel = models[0].id;
@@ -79,10 +90,8 @@ export const useChat = () => {
       } catch (e) { return; }
     }
 
-    // Mesaj gönderilince Input'u temizle
     setInput("");
 
-    // Yardımcı fonksiyon: Mesaj ekle
     const addMessage = (role: 'user' | 'assistant', text: string) => {
       const msg: Message = { id: Date.now().toString(), role, content: text, timestamp: new Date() };
       setChats(prev => prev.map(c => c.id === chatId ? { 
@@ -117,11 +126,12 @@ export const useChat = () => {
     models, 
     selectedModel, 
     isLoading, 
-    input,       // YENİ
-    setInput,    // YENİ
+    input,
+    setInput,
     setCurrentChatId, 
     setSelectedModel, 
     createNewChat, 
+    deleteChat,  // YENİ
     sendMessage 
   };
 };

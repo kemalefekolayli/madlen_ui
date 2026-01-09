@@ -54,10 +54,14 @@ export function ModelSelector({ models, selectedModel, onSelectModel, loading }:
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-80 max-h-96 overflow-y-auto
+        <div className="absolute top-full right-0 mt-2 w-80 max-h-96 overflow-y-auto
                         bg-white dark:bg-dark-400 rounded-xl shadow-medium
                         border border-cream-300 dark:border-dark-100
-                        z-50 py-2">
+                        z-[100] py-2">
+          {/* DÜZELTME: 
+              - 'left-0' yerine 'right-0' yapıldı (sağa hizalı açılır)
+              - z-index 50'den 100'e çıkarıldı
+          */}
           {models.length === 0 ? (
             <div className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
               Model bulunamadı

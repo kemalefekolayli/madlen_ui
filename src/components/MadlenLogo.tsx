@@ -1,14 +1,15 @@
 interface LogoProps {
   className?: string;
+  size?: number; // YENİ: Size prop'u eklendi
 }
 
-export function MadlenLogo({ className = '' }: LogoProps) {
+export function MadlenLogo({ className = '', size = 32 }: LogoProps) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       {/* Madlen crown/shell logo */}
       <svg 
-        width="32" 
-        height="32" 
+        width={size} 
+        height={size} 
         viewBox="0 0 40 40" 
         fill="none" 
         xmlns="http://www.w3.org/2000/svg"
