@@ -1,78 +1,64 @@
-import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
+import React, { FormEvent, useRef, useEffect } from 'react';
+import { Send, StopCircle } from 'lucide-react';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
-  disabled?: boolean;
-  placeholder?: string;
+  isLoading: boolean;
+  input: string;                  // YENİ PROP
+  setInput: (value: string) => void; // YENİ PROP
 }
 
-export function ChatInput({ onSendMessage, disabled, placeholder = 'Mesajınızı yazın...' }: ChatInputProps) {
-  const [message, setMessage] = useState('');
+export const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, input, setInput }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+      textareaRef.current.style.height = 'inherit';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
-  }, [message]);
+  }, [input]);
 
-  const handleSubmit = () => {
-    if (message.trim() && !disabled) {
-      onSendMessage(message.trim());
-      setMessage('');
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-      }
-    }
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+    onSendMessage(input);
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      handleSubmit(e);
     }
   };
 
   return (
-    <div className="border-t border-cream-300 dark:border-dark-100 bg-white dark:bg-dark-400 p-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-end gap-3">
-          <div className="flex-1 relative">
-            <textarea
-              ref={textareaRef}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder}
-              disabled={disabled}
-              rows={1}
-              className="input-field resize-none pr-12 min-h-[48px] max-h-[200px]"
-            />
-          </div>
-          
-          <button
-            onClick={handleSubmit}
-            disabled={disabled || !message.trim()}
-            className="btn-primary p-3 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-            aria-label="Gönder"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" 
-              />
-            </svg>
-          </button>
-        </div>
-        
-        <div className="text-xs text-center text-slate-400 dark:text-slate-500 mt-2">
-          Enter ile gönder, Shift+Enter ile yeni satır
-        </div>
+    <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+      <form onSubmit={handleSubmit} className="max-w-4xl mx-auto relative flex items-end gap-2 bg-gray-50 dark:bg-gray-800 p-2 rounded-3xl border border-gray-200 dark:border-gray-700 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all shadow-sm">
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Bir mesaj yazın..."
+          className="flex-1 max-h-32 bg-transparent border-none focus:ring-0 resize-none py-3 px-4 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+          disabled={isLoading}
+        />
+        <button
+          type="submit"
+          disabled={!input.trim() || isLoading}
+          className={`p-3 rounded-full flex-shrink-0 transition-all duration-200 ${
+            input.trim() && !isLoading
+              ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md transform hover:scale-105'
+              : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          {isLoading ? <StopCircle size={20} className="animate-pulse" /> : <Send size={20} />}
+        </button>
+      </form>
+      <div className="text-center mt-2 text-xs text-gray-400 dark:text-gray-500">
+        Madlen AI hata yapabilir. Önemli bilgileri kontrol edin.
       </div>
     </div>
   );
-}
+};
