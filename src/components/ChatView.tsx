@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import type { Chat, Model } from '../types';
+import type { Chat, Model, ImageContent } from '../types';
 import { ModelSelector } from './ModelSelector';
 import { ChatMessage, TypingIndicator } from './ChatMessage';
 import { ChatInput } from './ChatInput';
@@ -10,7 +10,7 @@ interface ChatViewProps {
   models: Model[];
   selectedModel: string;
   onSelectModel: (modelId: string) => void;
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string, images?: ImageContent[]) => void;
   isLoading?: boolean;
   modelsLoading?: boolean;
   input: string;
@@ -30,19 +30,18 @@ export function ChatView({
 }: ChatViewProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Seçili modelin adını bul
+  // Find selected model name
   const selectedModelData = models.find(m => m.id === selectedModel);
   const modelName = selectedModelData?.name || 'AI';
 
-  // Yeni mesaj geldiğinde otomatik kaydır
+  // Auto-scroll when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chat?.messages, isLoading]);
 
-  // StarterPrompts'a tıklanınca input'a yaz ve gönder
+  // Handle starter prompt selection
   const handlePromptSelect = (prompt: string) => {
     setInput(prompt);
-    // Kısa bir gecikmeyle gönder (input'un güncellenmesini bekle)
     setTimeout(() => {
       onSendMessage(prompt);
     }, 50);
@@ -52,7 +51,7 @@ export function ChatView({
 
   return (
     <div className="flex-1 flex flex-col h-screen relative bg-cream-50 dark:bg-dark-500">
-      {/* Header - z-50 ile en üstte */}
+      {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-cream-300 dark:border-dark-100 bg-white/80 dark:bg-dark-400/80 backdrop-blur-sm z-50 relative">
         <div>
           <h1 className="text-lg font-semibold text-dark-300 dark:text-white">
@@ -60,6 +59,11 @@ export function ChatView({
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             Yapay zeka ile sohbet edin
+            {selectedModelData?.supportsVision && (
+              <span className="ml-2 inline-flex items-center gap-1 text-madlen-500">
+                • Görsel destekli
+              </span>
+            )}
           </p>
         </div>
         
@@ -75,15 +79,13 @@ export function ChatView({
       <main className="flex-1 overflow-y-auto px-6 py-6 relative">
         <div className="max-w-4xl mx-auto">
           {!hasMessages ? (
-            // Mesaj yoksa EmptyState ve StarterPrompts göster
             <div className="flex flex-col items-center justify-center min-h-[60vh]">
-              <EmptyState />
+              <EmptyState supportsVision={selectedModelData?.supportsVision} />
               <div className="w-full mt-8">
                 <StarterPrompts onSelect={handlePromptSelect} />
               </div>
             </div>
           ) : (
-            // Mesajlar varsa onları göster
             <>
               {chat.messages.map((message) => (
                 <ChatMessage 
@@ -106,13 +108,20 @@ export function ChatView({
           isLoading={isLoading || false}
           input={input}
           setInput={setInput}
+          models={models}
+          selectedModel={selectedModel}
+          onSelectModel={onSelectModel}
         />
       </div>
     </div>
   );
 }
 
-function EmptyState() {
+interface EmptyStateProps {
+  supportsVision?: boolean;
+}
+
+function EmptyState({ supportsVision }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center text-center">
       <div className="w-20 h-20 rounded-full bg-madlen-100 dark:bg-madlen-500/20 flex items-center justify-center mb-6">
@@ -126,6 +135,11 @@ function EmptyState() {
       </h2>
       <p className="text-slate-500 dark:text-slate-400 max-w-md">
         Model seçerek sohbete başlayabilirsiniz.
+        {supportsVision && (
+          <span className="block mt-2 text-madlen-500">
+            📷 Bu model görsel/resim girişlerini destekliyor!
+          </span>
+        )}
       </p>
     </div>
   );

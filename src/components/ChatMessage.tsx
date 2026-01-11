@@ -1,12 +1,14 @@
 import type { Message } from '../types';
+import { MessageImages } from './MessageImages';
 
 interface ChatMessageProps {
   message: Message;
-  modelName?: string; // YENİ: Model adını göstermek için
+  modelName?: string;
 }
 
 export function ChatMessage({ message, modelName }: ChatMessageProps) {
   const isUser = message.role === 'user';
+  const hasImages = message.images && message.images.length > 0;
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
@@ -31,18 +33,41 @@ export function ChatMessage({ message, modelName }: ChatMessageProps) {
 
         {/* Message Content */}
         <div className={isUser ? 'chat-bubble-user' : 'chat-bubble-assistant'}>
-          {/* Model adını sadece assistant mesajlarında göster */}
+          {/* Model name for assistant messages */}
           {!isUser && modelName && (
             <div className="text-xs font-medium text-madlen-500 dark:text-madlen-400 mb-1">
               {modelName}
             </div>
           )}
-          <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+          
+          {/* Images (shown above text for user messages) */}
+          {hasImages && isUser && (
+            <MessageImages images={message.images!} />
+          )}
+          
+          {/* Message text */}
+          {message.content && (
+            <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+          )}
+          
+          {/* Images (shown below for assistant messages if they ever have images) */}
+          {hasImages && !isUser && (
+            <div className="mt-2">
+              <MessageImages images={message.images!} />
+            </div>
+          )}
+          
+          {/* Timestamp */}
           <div className={`text-xs mt-2 ${isUser ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}`}>
             {new Date(message.timestamp).toLocaleTimeString('tr-TR', { 
               hour: '2-digit', 
               minute: '2-digit' 
             })}
+            {hasImages && (
+              <span className="ml-2">
+                • {message.images!.length} resim
+              </span>
+            )}
           </div>
         </div>
       </div>

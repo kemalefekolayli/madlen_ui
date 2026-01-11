@@ -15,12 +15,10 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    // Check localStorage first
     const stored = localStorage.getItem('madlen-chat-theme');
     if (stored === 'light' || stored === 'dark') {
       return stored;
     }
-    // Fallback to system preference
     if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
       return 'dark';
     }

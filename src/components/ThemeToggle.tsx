@@ -14,7 +14,6 @@ export function ThemeToggle() {
       }`}
       aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
     >
-      {/* Sun icon */}
       <svg
         className={`w-5 h-5 transition-all duration-300 ${
           !isDark 
@@ -33,7 +32,6 @@ export function ThemeToggle() {
         />
       </svg>
       
-      {/* Moon icon */}
       <svg
         className={`w-5 h-5 transition-all duration-300 ${
           isDark 
