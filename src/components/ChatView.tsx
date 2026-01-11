@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react';
+import { XCircle, AlertCircle } from 'lucide-react'; // İkonları ekledik
 import type { Chat, Model, ImageContent } from '../types';
 import { ModelSelector } from './ModelSelector';
 import { ChatMessage, TypingIndicator } from './ChatMessage';
@@ -15,6 +16,8 @@ interface ChatViewProps {
   modelsLoading?: boolean;
   input: string;
   setInput: (value: string) => void;
+  error: string | null;      // YENİ
+  onClearError: () => void;  // YENİ
 }
 
 export function ChatView({ 
@@ -26,20 +29,18 @@ export function ChatView({
   isLoading,
   modelsLoading,
   input,
-  setInput
+  setInput,
+  error,
+  onClearError
 }: ChatViewProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Find selected model name
   const selectedModelData = models.find(m => m.id === selectedModel);
   const modelName = selectedModelData?.name || 'AI';
 
-  // Auto-scroll when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chat?.messages, isLoading]);
 
-  // Handle starter prompt selection
   const handlePromptSelect = (prompt: string) => {
     setInput(prompt);
     setTimeout(() => {
@@ -47,7 +48,7 @@ export function ChatView({
     }, 50);
   };
 
-  const hasMessages = chat && chat.messages.length > 0;
+  const hasMessages = chat ? chat.messages.length > 0 : false;
 
   return (
     <div className="flex-1 flex flex-col h-screen relative bg-cream-50 dark:bg-dark-500">
@@ -72,8 +73,25 @@ export function ChatView({
           selectedModel={selectedModel}
           onSelectModel={onSelectModel}
           loading={modelsLoading}
+          disabled={hasMessages} 
         />
       </header>
+
+      {/* YENİ: Hata Bannerı (Header altında görünür) */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 px-6 py-3 flex items-center justify-between animate-in slide-in-from-top-2">
+          <div className="flex items-center gap-2 text-red-700 dark:text-red-300 text-sm font-medium">
+            <AlertCircle size={18} />
+            <span>{error}</span>
+          </div>
+          <button 
+            onClick={onClearError}
+            className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-200 transition-colors"
+          >
+            <XCircle size={18} />
+          </button>
+        </div>
+      )}
 
       {/* Messages Area */}
       <main className="flex-1 overflow-y-auto px-6 py-6 relative">
@@ -87,7 +105,7 @@ export function ChatView({
             </div>
           ) : (
             <>
-              {chat.messages.map((message) => (
+              {chat!.messages.map((message) => (
                 <ChatMessage 
                   key={message.id} 
                   message={message} 

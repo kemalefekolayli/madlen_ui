@@ -7,9 +7,10 @@ interface ModelSelectorProps {
   selectedModel: string;
   onSelectModel: (modelId: string) => void;
   loading?: boolean;
+  disabled?: boolean;
 }
 
-export function ModelSelector({ models, selectedModel, onSelectModel, loading }: ModelSelectorProps) {
+export function ModelSelector({ models, selectedModel, onSelectModel, loading, disabled }: ModelSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -26,40 +27,47 @@ export function ModelSelector({ models, selectedModel, onSelectModel, loading }:
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const toggleOpen = () => {
+    if (!disabled && !loading) {
+      setIsOpen(!isOpen);
+    }
+  };
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        disabled={loading}
-        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cream-100 dark:bg-dark-400 
-                   border border-cream-300 dark:border-dark-100
-                   hover:bg-cream-200 dark:hover:bg-dark-300 
-                   transition-all duration-200
-                   text-sm font-medium text-dark-200 dark:text-slate-200
-                   disabled:opacity-50 disabled:cursor-not-allowed"
+        onClick={toggleOpen}
+        disabled={loading || disabled}
+        className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-200 text-sm font-medium
+                   ${disabled 
+                     ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed dark:bg-dark-300 dark:border-dark-100 dark:text-gray-500' 
+                     : 'bg-cream-100 dark:bg-dark-400 border-cream-300 dark:border-dark-100 hover:bg-cream-200 dark:hover:bg-dark-300 text-dark-200 dark:text-slate-200'
+                   }`}
       >
-        {/* Vision indicator in selected model */}
         {selectedModelData?.supportsVision && (
-          <Eye size={16} className="text-madlen-500" title="Görsel destekler" />
+          // DÜZELTME: Title prop'u span'a taşındı
+          <span title="Görsel destekler" className="flex items-center">
+            <Eye size={16} className={disabled ? "text-gray-400" : "text-madlen-500"} />
+          </span>
         )}
         
-        <svg className="w-4 h-4 text-madlen-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
         <span className="max-w-[150px] truncate">
           {loading ? 'Yükleniyor...' : (selectedModelData?.name || 'Model Seç')}
         </span>
-        <svg 
-          className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
-          fill="none" 
-          viewBox="0 0 24 24" 
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+
+        {!disabled && (
+          <svg 
+            className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        )}
       </button>
 
-      {isOpen && (
+      {isOpen && !disabled && (
         <div className="absolute top-full right-0 mt-2 w-80 max-h-96 overflow-y-auto
                         bg-white dark:bg-dark-400 rounded-xl shadow-medium
                         border border-cream-300 dark:border-dark-100
@@ -84,13 +92,11 @@ export function ModelSelector({ models, selectedModel, onSelectModel, loading }:
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {/* Vision capability indicator */}
                     {model.supportsVision && (
-                      <Eye 
-                        size={14} 
-                        className="text-madlen-500 flex-shrink-0" 
-                        title="Görsel destekler"
-                      />
+                      // DÜZELTME: Title prop'u span'a taşındı
+                      <span title="Görsel destekler" className="flex items-center">
+                        <Eye size={14} className="text-madlen-500 flex-shrink-0" />
+                      </span>
                     )}
                     <span className={`font-medium text-sm ${
                       selectedModel === model.id 

@@ -12,6 +12,8 @@ function AppContent() {
     selectedModel, 
     isLoading, 
     input,
+    error,          // YENİ
+    clearError,     // YENİ
     setInput,
     setCurrentChatId, 
     setSelectedModel, 
@@ -40,6 +42,8 @@ function AppContent() {
           isLoading={isLoading}
           input={input}
           setInput={setInput}
+          error={error}            // YENİ
+          onClearError={clearError} // YENİ
         />
       </div>
     </div>

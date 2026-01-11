@@ -4,6 +4,47 @@ import type { Chat, Model, Message, ImageContent } from '../types';
 
 const USER_ID = "demo-user";
 
+const getFriendlyErrorMessage = (errorMsg: string): string => {
+  if (!errorMsg) return "Bir hata oluştu.";
+
+  // Backend'den JSON string döndüyse temizle (örn: {"message": "..."})
+  if (errorMsg.startsWith("{") && errorMsg.includes("limit")) {
+     // Basit bir temizlik
+     if (errorMsg.includes("session limit")) return "⚠️ Sohbet limiti doldu. Lütfen eski sohbetleri silin.";
+     if (errorMsg.includes("message limit")) return "⚠️ Mesaj limiti doldu. Yeni sohbet açın.";
+  }
+
+  // 1. Session Limit
+  const sessionLimitMatch = errorMsg.match(/Maximum session limit reached: (\d+)/);
+  if (sessionLimitMatch) {
+    return `⚠️ Maksimum sohbet limitine (${sessionLimitMatch[1]}) ulaştınız. Lütfen eski sohbetlerden birini silin.`;
+  }
+
+  // 2. Message Limit
+  const messageLimitMatch = errorMsg.match(/Maximum message limit reached.*: (\d+)/);
+  if (messageLimitMatch) {
+    return `⚠️ Bu sohbet mesaj limitine (${messageLimitMatch[1]}) ulaştı. Lütfen yeni bir sohbet başlatın.`;
+  }
+
+  // 3. Genel Kontroller
+  if (errorMsg.includes("session limit")) return "⚠️ Sohbet sınırına ulaştınız. Eskileri silmelisiniz.";
+  if (errorMsg.includes("message limit")) return "⚠️ Mesaj limiti doldu. Yeni sohbet açın.";
+  if (errorMsg.includes("support image") || errorMsg.includes("Vision") || errorMsg.includes("vision")) return "📷 Seçtiğiniz model görsel analizini desteklemiyor.";
+  if (errorMsg.includes("Image size exceeds")) return "🖼️ Resim çok büyük. Lütfen 5MB'dan küçük bir resim yükleyin.";
+  if (errorMsg.includes("Invalid image")) return "❌ Geçersiz resim formatı.";
+  
+  // 4. Axios Varsayılan Hataları (Yakalanılamayan 400 durumları için)
+  if (errorMsg.includes("status code 400")) return "⚠️ İstek geçersiz. (Limit aşımı veya hatalı veri).";
+  if (errorMsg.includes("Network Error")) return "⚠️ Sunucuya ulaşılamıyor. Backend çalışıyor mu?";
+
+  // 5. Diğerleri
+  if (errorMsg.includes("AI service error") || errorMsg.includes("OpenRouter")) return "🔌 Yapay zeka servisine ulaşılamıyor. Biraz bekleyin.";
+  if (errorMsg === "RATE_LIMIT" || errorMsg.includes("429")) return "⏳ Sistem çok yoğun, lütfen bekleyin.";
+  if (errorMsg === "MODEL_NOT_FOUND" || errorMsg.includes("404")) return "🚫 Model veya sohbet bulunamadı.";
+
+  return errorMsg.length < 200 ? `⚠️ ${errorMsg}` : "⚠️ Beklenmedik bir hata oluştu.";
+};
+
 export const useChat = () => {
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
@@ -11,10 +52,11 @@ export const useChat = () => {
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [input, setInput] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const currentChat = chats.find(c => c.id === currentChatId) || null;
+  const clearError = useCallback(() => setError(null), []);
 
-  // 1. Load initial data
   useEffect(() => {
     const initData = async () => {
       try {
@@ -23,53 +65,45 @@ export const useChat = () => {
           chatService.getUserSessions(USER_ID)
         ]);
         setModels(fetchedModels);
-        
-        // Prefer vision-capable model as default if available
         if (fetchedModels.length > 0 && !selectedModel) {
           const visionModel = fetchedModels.find(m => m.supportsVision);
           setSelectedModel(visionModel?.id || fetchedModels[0].id);
         }
-        
         setChats(fetchedSessions);
-      } catch (error) {
-        console.error("Veri yükleme hatası", error);
+      } catch (err) {
+        console.error(err);
+        setError("Veriler yüklenemedi. Backend'i kontrol edin.");
       }
     };
     initData();
   }, []);
 
-  // 2. Create new chat
   const createNewChat = useCallback(async () => {
     let activeModel = selectedModel || (models.length > 0 ? models[0].id : "");
     if (!activeModel) return;
 
     try {
+      setError(null);
       const newChat = await chatService.createSession(USER_ID, activeModel);
       setChats(prev => [newChat, ...prev]);
       setCurrentChatId(newChat.id);
       if (!selectedModel) setSelectedModel(activeModel);
-    } catch (e) { 
-      console.error(e); 
+    } catch (e: any) { 
+      setError(getFriendlyErrorMessage(e.message || ""));
     }
   }, [selectedModel, models]);
 
-  // 3. Delete chat
   const deleteChat = useCallback(async (chatId: string) => {
     try {
       await chatService.deleteSession(chatId, USER_ID);
       setChats(prev => prev.filter(c => c.id !== chatId));
-      
-      if (currentChatId === chatId) {
-        setCurrentChatId(null);
-      }
+      if (currentChatId === chatId) setCurrentChatId(null);
     } catch (error) {
-      console.error("Sohbet silme hatası", error);
+      setError("Sohbet silinirken hata oluştu.");
     }
   }, [currentChatId]);
 
-  // 4. Send message (with optional images)
   const sendMessage = useCallback(async (content: string, images?: ImageContent[]) => {
-    // Allow sending if there's text or images
     if (!content.trim() && (!images || images.length === 0)) return;
 
     let activeModel = selectedModel;
@@ -77,36 +111,35 @@ export const useChat = () => {
       activeModel = models[0].id;
       setSelectedModel(activeModel);
     }
+    
     if (!activeModel) {
-      alert("Lütfen bir model seçiniz.");
+      setError("Lütfen bir model seçiniz.");
       return;
     }
 
-    // Check if trying to send images with non-vision model
     const currentModelData = models.find(m => m.id === activeModel);
     if (images && images.length > 0 && !currentModelData?.supportsVision) {
-      alert("Seçili model görsel desteklemiyor. Lütfen görsel destekleyen bir model seçin.");
+      setError("Seçili model resim desteklemiyor. Lütfen 'Vision' özellikli bir model seçin.");
       return;
     }
 
+    setError(null);
     let chatId = currentChatId;
 
-    // Create session if none exists
     if (!chatId) {
       try {
         const newChat = await chatService.createSession(USER_ID, activeModel);
         chatId = newChat.id;
         setChats(prev => [newChat, ...prev]);
         setCurrentChatId(chatId);
-      } catch (e) { 
-        console.error(e);
+      } catch (e: any) { 
+        setError(getFriendlyErrorMessage(e.message || ""));
         return; 
       }
     }
 
     setInput("");
 
-    // Helper to add message to chat
     const addMessage = (role: 'user' | 'assistant', text: string, msgImages?: ImageContent[]) => {
       const msg: Message = { 
         id: Date.now().toString(), 
@@ -118,14 +151,12 @@ export const useChat = () => {
       setChats(prev => prev.map(c => c.id === chatId ? { 
         ...c, 
         messages: [...c.messages, msg],
-        // Update title from first user message if empty
         title: c.messages.length === 0 && role === 'user' 
           ? (text.substring(0, 30) || (msgImages?.length ? 'Resimli mesaj' : 'Yeni Sohbet'))
           : c.title 
       } : c));
     };
 
-    // Add user message with images
     addMessage('user', content, images);
     setIsLoading(true);
 
@@ -136,52 +167,16 @@ export const useChat = () => {
         : c
       ));
     } catch (error: any) {
-      let errorText = "Bir hata oluştu.";
-      
-      switch (error.message) {
-        case "RATE_LIMIT":
-          errorText = "⚠️ Model şu an çok yoğun. Lütfen başka model seçin.";
-          break;
-        case "MODEL_NOT_FOUND":
-          errorText = "⚠️ Bu modele erişilemiyor (404).";
-          break;
-        case "SERVER_ERROR":
-          errorText = "⚠️ Sunucu hatası.";
-          break;
-        case "VISION_NOT_SUPPORTED":
-          errorText = "⚠️ Seçili model görsel/resim girişlerini desteklemiyor. Lütfen görsel destekleyen bir model seçin.";
-          break;
-        case "IMAGE_TOO_LARGE":
-          errorText = "⚠️ Resim boyutu çok büyük. Maksimum 5 MB olmalıdır.";
-          break;
-        case "INVALID_IMAGE":
-          errorText = "⚠️ Geçersiz resim formatı. Lütfen JPEG, PNG, GIF veya WebP formatında bir resim seçin.";
-          break;
-        default:
-          if (error.details) {
-            errorText = `⚠️ ${error.details}`;
-          }
-      }
-      
-      addMessage('assistant', errorText);
+      const friendlyMessage = getFriendlyErrorMessage(error.message || "");
+      setError(friendlyMessage);
     } finally {
       setIsLoading(false);
     }
   }, [currentChatId, selectedModel, models]);
 
   return { 
-    chats, 
-    currentChat, 
-    currentChatId, 
-    models, 
-    selectedModel, 
-    isLoading, 
-    input,
-    setInput,
-    setCurrentChatId, 
-    setSelectedModel, 
-    createNewChat, 
-    deleteChat,
-    sendMessage 
+    chats, currentChat, currentChatId, models, selectedModel, 
+    isLoading, input, error, clearError, setInput,
+    setCurrentChatId, setSelectedModel, createNewChat, deleteChat, sendMessage 
   };
 };

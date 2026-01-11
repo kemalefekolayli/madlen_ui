@@ -13,7 +13,7 @@ const mapBackendMessageToFrontend = (msg: any, index: number): Message => ({
   role: msg.role,
   content: msg.content,
   timestamp: new Date(msg.timestamp || Date.now()),
-  images: msg.images // Include images if present
+  images: msg.images 
 });
 
 export const chatService = {
@@ -25,7 +25,7 @@ export const chatService = {
       name: m.name,
       description: m.description,
       free: m.available,
-      supportsVision: m.supportsVision ?? false // NEW: Map vision support
+      supportsVision: m.supportsVision ?? false
     }));
   },
 
@@ -84,7 +84,7 @@ export const chatService = {
     await api.delete(`/sessions/${sessionId}?userId=${userId}`);
   },
 
-  // Send message (with optional images)
+  // Send message
   sendMessage: async (
     sessionId: string, 
     message: string, 
@@ -96,7 +96,7 @@ export const chatService = {
         sessionId, 
         message, 
         model,
-        images // Include images in request
+        images 
       });
       
       return {
@@ -104,53 +104,46 @@ export const chatService = {
         sessionId: response.data.sessionId
       };
     } catch (error: any) {
-      // Handle specific error responses
+      console.error("API Hatası Detay:", error.response?.data); // Konsolda da görelim
+
       if (error.response) {
+        const data = error.response.data;
         const status = error.response.status;
-        const errorMessage = error.response.data?.message || '';
-        
-        // Vision not supported error
-        if (status === 400 && errorMessage.includes('vision')) {
-          const customError = new Error('VISION_NOT_SUPPORTED');
-          (customError as any).details = errorMessage;
-          throw customError;
+
+        // 1. Beklediğimiz standart 'message' alanı
+        if (data && data.message) {
+          throw new Error(data.message);
         }
-        
-        // Image too large error
-        if (status === 413) {
-          const customError = new Error('IMAGE_TOO_LARGE');
-          (customError as any).details = errorMessage;
-          throw customError;
+
+        // 2. Data direkt string olarak geldiyse
+        if (typeof data === 'string') {
+          throw new Error(data);
         }
-        
-        // Invalid image error
-        if (status === 400 && errorMessage.includes('image')) {
-          const customError = new Error('INVALID_IMAGE');
-          (customError as any).details = errorMessage;
-          throw customError;
+
+        // 3. 'error' alanı varsa (Spring Boot varsayılanı)
+        if (data && data.error && typeof data.error === 'string') {
+             // Eğer message yoksa error başlığını kullan
+             throw new Error(data.message || data.error);
         }
-        
-        // Rate limit error
-        if (status === 429) {
-          throw new Error('RATE_LIMIT');
+
+        // 4. Eğer 400 ise ve hala mesaj bulamadıysak, data objesini string yapıp fırlat
+        // Bu sayede "Error 400" yerine { "limit": 10 ... } gibi bir şey görürüz ve anlarız.
+        if (status === 400) {
+           throw new Error(JSON.stringify(data));
         }
-        
-        // Model not found
-        if (status === 404) {
-          throw new Error('MODEL_NOT_FOUND');
-        }
-        
-        // Server error
-        if (status >= 500) {
-          throw new Error('SERVER_ERROR');
-        }
+
+        // 5. Standart durumlar
+        if (status === 429) throw new Error('RATE_LIMIT');
+        if (status === 404) throw new Error('MODEL_NOT_FOUND');
+        if (status >= 500) throw new Error('SERVER_ERROR');
       }
       
+      // Hiçbir şey yakalanmazsa orjinal hatayı fırlat
       throw error;
     }
   },
 
-  // Send message with streaming (for future implementation)
+  // Send message with streaming
   sendMessageStream: async function* (
     sessionId: string, 
     message: string, 
@@ -171,22 +164,27 @@ export const chatService = {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      // Hata metnini body'den okumaya çalış
+      let errorText = `HTTP error! status: ${response.status}`;
+      try {
+        const errorJson = await response.json();
+        if (errorJson.message) errorText = errorJson.message;
+        else if (errorJson.error) errorText = errorJson.error;
+      } catch {
+        // JSON değilse text olarak oku
+        const text = await response.text();
+        if (text) errorText = text;
+      }
+      throw new Error(errorText);
     }
 
     const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error('No response body');
-    }
-
+    if (!reader) throw new Error('No response body');
     const decoder = new TextDecoder();
-    
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      
-      const chunk = decoder.decode(value, { stream: true });
-      yield chunk;
+      yield decoder.decode(value, { stream: true });
     }
   }
 };
